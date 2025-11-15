@@ -1,5 +1,4 @@
-const MONGO_URI = process.env.MONGO_URI;
-// server.js
+
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
@@ -144,4 +143,5 @@ app.delete('/blogs/:id', async (req, res) => {
 // ----------------- SERVER -----------------
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Backend running on port ${PORT}`));
+
 
