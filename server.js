@@ -1,5 +1,5 @@
+// server.js
 const express = require("express");
-const bodyParser = require("body-parser");
 const cors = require("cors");
 const mongoose = require("mongoose");
 require("dotenv").config();
@@ -8,18 +8,18 @@ const app = express();
 
 // ----------------- MIDDLEWARE -----------------
 app.use(cors());
-app.use(bodyParser.json());
+app.use(express.json()); // built-in body parser
 
 // ----------------- MONGODB CONNECTION -----------------
 const MONGO_URI = process.env.MONGO_URI;
 
 if (!MONGO_URI) {
-  console.error("ERROR: MONGO_URI not provided");
+  console.error("ERROR: MONGO_URI not provided in .env");
   process.exit(1);
 }
 
 mongoose
-  .connect(MONGO_URI)
+  .connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log("MongoDB connected"))
   .catch((err) => {
     console.error("MongoDB connection error:", err);
@@ -30,7 +30,7 @@ mongoose
 const userSchema = new mongoose.Schema(
   {
     email: { type: String, required: true, unique: true },
-    password: { type: String, required: true }
+    password: { type: String, required: true },
   },
   { timestamps: true }
 );
@@ -40,7 +40,7 @@ const blogSchema = new mongoose.Schema(
     title: { type: String, required: true },
     content: { type: String, required: true },
     author: { type: String, required: true },
-    date: { type: Date, default: Date.now }
+    date: { type: Date, default: Date.now },
   },
   { timestamps: true }
 );
@@ -62,24 +62,21 @@ app.post("/signup", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !email.endsWith("@kletech.ac.in")) {
+    if (!email || !email.endsWith("@kletech.ac.in"))
       return res.status(400).json({ message: "Email must end with @kletech.ac.in" });
-    }
-    if (!password || password.length < 8) {
+    if (!password || password.length < 8)
       return res.status(400).json({ message: "Password must be at least 8 characters" });
-    }
 
     const exists = await User.findOne({ email });
     if (exists) return res.status(400).json({ message: "User already exists" });
 
-    await new User({ email, password }).save();
+    const user = new User({ email, password });
+    await user.save();
 
     res.json({ message: "Signup successful" });
   } catch (err) {
     console.error("Signup error:", err);
-    if (err.code === 11000) {
-      return res.status(400).json({ message: "User already exists" });
-    }
+    if (err.code === 11000) return res.status(400).json({ message: "User already exists" });
     res.status(500).json({ message: "Server error" });
   }
 });
@@ -117,11 +114,11 @@ app.post("/blogs", async (req, res) => {
   try {
     const { title, content, author } = req.body;
 
-    if (!title || !content || !author) {
+    if (!title || !content || !author)
       return res.status(400).json({ message: "All fields required" });
-    }
 
-    const blog = await new Blog({ title, content, author }).save();
+    const blog = new Blog({ title, content, author });
+    await blog.save();
 
     res.json({ message: "Blog added", blog });
   } catch (err) {
@@ -134,7 +131,6 @@ app.post("/blogs", async (req, res) => {
 app.delete("/blogs/:id", async (req, res) => {
   try {
     const deleted = await Blog.findByIdAndDelete(req.params.id);
-
     if (!deleted) return res.status(404).json({ message: "Blog not found" });
 
     res.json({ message: "Blog deleted" });
@@ -145,6 +141,5 @@ app.delete("/blogs/:id", async (req, res) => {
 });
 
 // ----------------- SERVER -----------------
-
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
